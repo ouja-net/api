@@ -104,6 +104,16 @@ async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) 
                         if params.password != params.conf_password {
                             HttpResponse::Ok().json(json!({ "status": 200, "success": false, "error": "Password does not match" }))
                         } else {
+                            if params.username.len() > 16 {
+                                return HttpResponse::Ok().json(json!({ "stauts": 200, "success": false, "error": "Username is too long!" }))
+                            }
+                            if params.email.len() > 256 {
+                                return HttpResponse::Ok().json(json!({ "stauts": 200, "success": false, "error": "Email is too long!" }))
+                            }
+                            // Limiting the lenght because it could take a lot of space in the database.
+                            if params.password.len() > 256 {
+                                return HttpResponse::Ok().json(json!({ "stauts": 200, "success": false, "error": "Password is too long!" }))
+                            }
                             let new_doc = Accounts {
                                 date            : DateTime::now(),
                                 id              : Uuid::new_v4().to_string(),
@@ -115,14 +125,10 @@ async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) 
                                 profile_picture : None,
                                 skins           : None
                             };
-
-                            // HttpResponse::Ok().json(json!({ "status": 200, "success": true }))
                             match collection.insert_one(&new_doc, None).await {
                                 Ok(_result) => HttpResponse::Ok().json(json!({ "status": 200, "success": true })),
                                 Err(err) => HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() }))
-                            }
-                            // create account here
-                            
+                            }                            
                         }
                     }
                 }
@@ -163,6 +169,9 @@ async fn update_email(client: web::Data<Client>, req: HttpRequest, params: web::
         let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
         match collection.find_one(doc! { "session": token }, None).await {
             Ok(Some(account)) => {
+                if params.email.len() > 256 {
+                    return HttpResponse::Ok().json(json!({ "status": 200, "success": false, "error": "Email is too long!" }))
+                }
                 match collection.update_one(doc! { "id": account.id }, doc! { "$set": { "email": encrypt(&params.email) } }, None).await {
                     Ok(_update_result) => {
                         HttpResponse::Ok().json(json!({ "status": 200, "success": true }))
