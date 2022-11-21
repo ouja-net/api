@@ -13,6 +13,7 @@ pub fn v1_config(cfg: &mut web::ServiceConfig) {
         web::scope("account")
             .service(account::me)
             .service(account::login)
-            .service(account::register),
+            .service(account::register)
+            .service(account::update_email),
     );
 }

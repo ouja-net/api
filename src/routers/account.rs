@@ -1,4 +1,4 @@
-use actix_web::{get, post, put, web, HttpRequest, HttpResponse};
+use actix_web::{get, post, put, web, HttpRequest, HttpResponse, patch};
 use mongodb::{bson::{doc,  DateTime}, Client, Collection};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -34,6 +34,11 @@ pub struct RespondAccount {
     about_me: String,
     profile_picture: String,
     skins: Vec<Skins>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UpdateEmailParams {
+    email: String
 }
 
 fn get_session_token<'a>(req: &'a HttpRequest) -> Option<&'a str> {
@@ -116,6 +121,29 @@ async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) 
                     }
                 }
             }
+    }
+}
+
+#[patch("/email")]
+async fn update_email(client: web::Data<Client>, req: HttpRequest, params: web::Form<UpdateEmailParams>) -> HttpResponse {
+    if let Some(token) = get_session_token(&req) {
+        let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
+        match collection.find_one(doc! { "session": token }, None).await {
+            Ok(Some(account)) => {
+                match collection.update_one(doc! { "id": account.id }, doc! { "$set": { "email": encrypt(&params.email) } }, None).await {
+                    Ok(_update_result) => {
+                        HttpResponse::Ok().json(json!({ "status": 200, "success": true }))
+                    },
+                    Err(err) => {
+                        HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() }))
+                    }
+                }
+            },
+            Ok(None) => HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Could not authenticate request." })),
+            Err(err) => HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() })),
+        }
+    } else {
+        HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Could not authenticate request." }))
     }
 }
 
