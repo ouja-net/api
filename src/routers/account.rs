@@ -147,7 +147,7 @@ async fn login(client: web::Data<Client>, params: web::Form<LoginParams>) -> Htt
             }
         }
         Ok(None) => {
-            HttpResponse::NotFound().json(json!({ "OK": false, "error": "Account not found." }))
+            HttpResponse::NotFound().json(json!({ "code": 404, "success": false, "error": "Account not found." }))
         }
         Err(err) => HttpResponse::InternalServerError().body(err.to_string()),
     }
