@@ -1,7 +1,6 @@
 use magic_crypt::{new_magic_crypt, MagicCryptTrait};
 
 pub fn encrypt(string: &str) -> String {
-    println!("{}", dotenvy::var("KEY").unwrap());
     let mc = new_magic_crypt!(dotenvy::var("KEY").unwrap(), 256);
     return mc.encrypt_str_to_base64(string);
 }
