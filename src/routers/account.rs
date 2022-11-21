@@ -41,6 +41,12 @@ pub struct UpdateEmailParams {
     email: String
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct UpdateUserParams {
+    username: String,
+    about_me: String
+}
+
 fn get_session_token<'a>(req: &'a HttpRequest) -> Option<&'a str> {
     return req.headers().get("x-session")?.to_str().ok();
 }
@@ -121,6 +127,33 @@ async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) 
                     }
                 }
             }
+    }
+}
+
+#[patch("")]
+async fn update_user(client: web::Data<Client>, req: HttpRequest, params: web::Form<UpdateUserParams>) -> HttpResponse {
+    if let Some(token) = get_session_token(&req) {
+        let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
+        match collection.find_one(doc! { "session": token }, None).await {
+            Ok(Some(account)) => {
+                if params.about_me.len() > 256 {
+                    return HttpResponse::Ok().json(json!({ "code": 200, "success": false, "error": "About me is too long!" }))
+                }
+                if params.username.len() > 16 {
+                    return HttpResponse::Ok().json(json!({ "code": 200, "success": false, "error": "Username is too long!" }))
+                }
+                match collection.update_one(doc! { "id": account.id }, doc! { "$set": { "username": &params.username, "about_me": &params.about_me } }, None).await {
+                    Ok(_update_result) => {
+                        HttpResponse::Ok().json(json!({ "code": 200, "success": true, "account": doc! { "username": &params.username, "about_me": &params.about_me } }))
+                    },
+                    Err(err) => HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() })),
+                }
+            },
+            Ok(None) => HttpResponse::Unauthorized().json(json!({ "code": 401, "success": false, "error": "Could not authenticate request." })),
+            Err(err) => HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() })),
+        }
+    } else {
+        HttpResponse::Unauthorized().json(json!({ "code": 401, "success": false, "error": "Could not authenticate request." }))
     }
 }
 

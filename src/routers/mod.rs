@@ -14,6 +14,7 @@ pub fn v1_config(cfg: &mut web::ServiceConfig) {
             .service(account::me)
             .service(account::login)
             .service(account::register)
+            .service(account::update_user)
             .service(account::update_email),
     );
 }
