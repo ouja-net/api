@@ -25,6 +25,8 @@ pub struct SkinCollection {
     pub id: String,
     pub hash: String,
     pub filename: String,
+    pub title: String,
+    pub description: String,
     pub size: usize,
     pub metadata: SkinMeta,
 }

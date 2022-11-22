@@ -5,6 +5,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
+    util::get_session_token,
     magic_crypt::{decrypt, encrypt},
     models::{Accounts, Skins},
 };
@@ -45,10 +46,6 @@ pub struct UpdateEmailParams {
 pub struct UpdateUserParams {
     username: String,
     about_me: String
-}
-
-fn get_session_token<'a>(req: &'a HttpRequest) -> Option<&'a str> {
-    return req.headers().get("x-session")?.to_str().ok();
 }
 
 #[get("/@me")]
