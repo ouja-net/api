@@ -4,10 +4,6 @@ use serde_json::json;
 
 use crate::models::Accounts;
 
-// fn get_session_token<'a>(req: &'a HttpRequest) -> Option<&'a str> {
-//     return req.headers().get("x-session")?.to_str().ok();
-// }
-
 #[get("{username}")]
 pub async fn index(client: web::Data<Client>, username: web::Path<String>) -> HttpResponse {
     let username = username.into_inner();

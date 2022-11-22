@@ -3,6 +3,7 @@ use actix_web::{web, App, HttpServer};
 use env_logger::Env;
 use mongodb::Client;
 
+mod config;
 mod magic_crypt;
 mod models;
 mod routers;
