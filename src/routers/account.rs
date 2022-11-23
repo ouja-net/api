@@ -5,7 +5,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
-    util::get_session_token,
+    util::{get_session_token, verified_csrf},
     magic_crypt::{decrypt, encrypt},
     models::{Accounts, Skins},
 };
@@ -81,7 +81,10 @@ async fn me(client: web::Data<Client>, req: HttpRequest) -> HttpResponse {
 }
 
 #[put("/register")]
-async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) -> HttpResponse {
+async fn register(client: web::Data<Client>, req: HttpRequest, params: web::Form<RegisterParams>) -> HttpResponse {
+    if !verified_csrf(&req) {
+        return HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Invalid CSRF Token!" }));
+    }
     let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
     match collection.find_one(doc! { "username": { "$regex": "^".to_owned() + &params.username.to_lowercase() + "$", "$options": "i" } }, None).await {
         Err(err) => HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() })),
@@ -135,6 +138,9 @@ async fn register(client: web::Data<Client>, params: web::Form<RegisterParams>) 
 
 #[patch("")]
 async fn update_user(client: web::Data<Client>, req: HttpRequest, params: web::Form<UpdateUserParams>) -> HttpResponse {
+    if !verified_csrf(&req) {
+        return HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Invalid CSRF Token!" }));
+    }
     if let Some(token) = get_session_token(&req) {
         let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
         match collection.find_one(doc! { "session": token }, None).await {
@@ -162,6 +168,9 @@ async fn update_user(client: web::Data<Client>, req: HttpRequest, params: web::F
 
 #[patch("/email")]
 async fn update_email(client: web::Data<Client>, req: HttpRequest, params: web::Form<UpdateEmailParams>) -> HttpResponse {
+    if !verified_csrf(&req) {
+        return HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Invalid CSRF Token!" }));
+    }
     if let Some(token) = get_session_token(&req) {
         let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
         match collection.find_one(doc! { "session": token }, None).await {
@@ -187,7 +196,10 @@ async fn update_email(client: web::Data<Client>, req: HttpRequest, params: web::
 }
 
 #[post("/login")]
-async fn login(client: web::Data<Client>, params: web::Form<LoginParams>) -> HttpResponse {
+async fn login(client: web::Data<Client>, req: HttpRequest, params: web::Form<LoginParams>) -> HttpResponse {
+    if !verified_csrf(&req) {
+        return HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Invalid CSRF Token!" }));
+    }
     let collection: Collection<Accounts> = client.database("ouja_skins").collection("accounts");
     let email = encrypt(&params.email);
     let password = encrypt(&params.password);

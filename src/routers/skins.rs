@@ -11,7 +11,7 @@ use uuid::Uuid;
 use crate::{
     magic_crypt::encrypt,
     models::{Accounts, SkinCollection, SkinMeta},
-    util::{get_session_token, get_skins_path},
+    util::{get_session_token, get_skins_path, verified_csrf},
 };
 
 #[put("/upload")]
@@ -20,6 +20,9 @@ pub async fn upload_skin(
     mut payload: Multipart,
     req: HttpRequest,
 ) -> HttpResponse {
+    if !verified_csrf(&req) {
+        return HttpResponse::Unauthorized().json(json!({ "status": 401, "success": false, "error": "Invalid CSRF Token!" }));
+    }
     if let Some(token) = get_session_token(&req) {
         let collection_accounts: Collection<Accounts> =
             client.database("ouja_skins").collection("accounts");
