@@ -11,12 +11,6 @@ pub struct Accounts {
     pub session: Option<String>,
     pub about_me: Option<String>,
     pub profile_picture: Option<String>,
-    pub skins: Option<Vec<Skins>>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Skins {
-    pub id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -29,6 +23,7 @@ pub struct SkinCollection {
     pub description: String,
     pub size: usize,
     pub metadata: SkinMeta,
+    pub owner: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

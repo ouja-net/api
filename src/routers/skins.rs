@@ -1,18 +1,45 @@
 use std::{fs, io::Write, str::from_utf8};
 
 use actix_multipart::{Multipart};
-use actix_web::{put, web, HttpRequest, HttpResponse};
+use actix_web::{put, web, HttpRequest, HttpResponse, get};
 use bson::doc;
 use futures_util::stream::StreamExt as _;
 use mongodb::{bson::DateTime, Client, Collection};
+use serde::{Serialize, Deserialize};
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::{
     magic_crypt::encrypt,
-    models::{Accounts, SkinCollection, SkinMeta},
+    models::{Accounts, SkinMeta, SkinCollection},
     util::{get_session_token, get_skins_path, verified_csrf},
 };
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RespondSkin {
+    pub id: String,
+    pub date: DateTime,
+    pub title: String,
+    pub description: String,
+    pub owner: String
+}
+
+#[get("/{id}.json")]
+pub async fn get_skin(client: web::Data<Client>, id: web::Path<String>) -> HttpResponse {
+    let id = id.into_inner();
+    let collection: Collection<RespondSkin> = client.database("ouja_skins").collection("skins");
+    match collection.find_one(doc! { "id": id }, None).await {
+        Ok(None) => {
+            HttpResponse::NotFound().json(json!({ "status": 404, "success": false, "error": "Skin not found" }))
+        },
+        Ok(Some(skin)) => {
+            HttpResponse::Ok().json(json!(skin))
+        },
+        Err(err) => {
+            HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() }))
+        }
+    }
+}
 
 #[put("/upload")]
 pub async fn upload_skin(
@@ -30,7 +57,7 @@ pub async fn upload_skin(
             client.database("ouja_skins").collection("skins");
 
         match collection_accounts.find_one(doc! { "session": token }, None).await {
-            Ok(Some(_account)) => {
+            Ok(Some(account)) => {
                 let mut file_size: usize = 0;
                 let mut buffer: Vec<u8> = Vec::new();
                 let mut file_name: String = "".to_string();
@@ -125,8 +152,9 @@ pub async fn upload_skin(
                         HttpResponse::Forbidden().json(json!({ "status": 403, "success": false, "error": "Skin file already exists!" }))
                     },
                     Ok(None) => {
+                        let account_id = &account.id;
                         // Now checking if the title already exists
-                        match collection_skins.find_one(doc! { "title": { "$regex": "^".to_owned() + &title.to_lowercase() + "$", "$options": "i" } }, None).await {
+                        match collection_skins.find_one(doc! { "owner": account_id.to_string(), "title": { "$regex": "^".to_owned() + &title.to_lowercase() + "$", "$options": "i" } }, None).await {
                             Err(err) => {
                                 HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() }))
                             },
@@ -143,6 +171,7 @@ pub async fn upload_skin(
                                     title,
                                     description,
                                     metadata: meta,
+                                    owner: account_id.to_string(),
                                 };
                 
                                 let skins_path = get_skins_path();
@@ -152,8 +181,17 @@ pub async fn upload_skin(
                                     Ok(()) => {
                                         match collection_skins.insert_one(&skin, None).await {
                                             Ok(_result) => {
-                                                HttpResponse::Ok()
-                                                    .json(json!({ "status": 200, "success": true, "skin": &skin.id }))
+                                                match collection_accounts.update_one(doc! { "id": &account.id }, doc! { "$push": { "skins": &skin.id } }, None).await {
+                                                    Ok(_result) => {
+                                                        HttpResponse::Ok()
+                                                        .json(json!({ "status": 200, "success": true, "skin": &skin.id }))
+                                                    },
+                                                    Err(err) => {
+                                                        println!("{:?} - Updating user", err);
+                                                        HttpResponse::InternalServerError().json(json!({ "status": 500, "success": false, "error": err.to_string() }))
+                                                    }
+                                                }
+
                                             }
                                             Err(err) => HttpResponse::InternalServerError().json(
                                                 json!({ "status": 500, "success": false, "error": err.to_string() }),

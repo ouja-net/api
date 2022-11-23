@@ -16,11 +16,7 @@ pub fn get_csrf_token<'a>(req: &'a HttpRequest) -> Option<&'a str> {
 
 pub fn verified_csrf<'a>(req: &'a HttpRequest) -> bool {
     if let Some(token) = get_csrf_token(&req) {
-        if decrypt(token).len() > 0 {
-            return true;
-        } else {
-            return false;
-        }
+        return decrypt(token).len() > 0;
     } else {
         return false;
     }

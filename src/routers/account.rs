@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     util::{get_session_token, verified_csrf},
     magic_crypt::{decrypt, encrypt},
-    models::{Accounts, Skins},
+    models::Accounts,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -33,8 +33,7 @@ pub struct RespondAccount {
     session: String,
     username: String,
     about_me: String,
-    profile_picture: String,
-    skins: Vec<Skins>,
+    profile_picture: String
 }
 
 #[derive(Serialize, Deserialize)]
@@ -61,8 +60,7 @@ async fn me(client: web::Data<Client>, req: HttpRequest) -> HttpResponse {
                     "session": account.session,
                     "username": account.username,
                     "about_me": account.about_me,
-                    "profile_picture": account.profile_picture,
-                    "skins": account.skins
+                    "profile_picture": account.profile_picture
                 });
                 HttpResponse::Ok()
                     .json(json!({ "status": 200, "success": true, "account": respond }))
@@ -115,15 +113,14 @@ async fn register(client: web::Data<Client>, req: HttpRequest, params: web::Form
                                 return HttpResponse::Ok().json(json!({ "stauts": 200, "success": false, "error": "Password is too long!" }))
                             }
                             let new_doc = Accounts {
-                                date            : DateTime::now(),
-                                id              : Uuid::new_v4().to_string(),
-                                username        : params.username.to_string(),
-                                email           : encrypt(&params.email.to_lowercase()),
-                                password        : encrypt(&params.password),
-                                session         : None,
-                                about_me        : None,
-                                profile_picture : None,
-                                skins           : None
+                                date: DateTime::now(),
+                                id: Uuid::new_v4().to_string(),
+                                username: params.username.to_string(),
+                                email: encrypt(&params.email.to_lowercase()),
+                                password: encrypt(&params.password),
+                                session: None,
+                                about_me: None,
+                                profile_picture : None
                             };
                             match collection.insert_one(&new_doc, None).await {
                                 Ok(_result) => HttpResponse::Ok().json(json!({ "status": 200, "success": true })),

@@ -9,8 +9,16 @@ pub fn v1(cfg: &mut web::ServiceConfig) {
 }
 
 pub fn v1_config(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("user").service(user::index));
-    cfg.service(web::scope("skins").service(skins::upload_skin));
+    cfg.service(
+        web::scope("user")
+            .service(user::index)
+            .service(user::get_user_skins),
+    );
+    cfg.service(
+        web::scope("skins")
+            .service(skins::upload_skin)
+            .service(skins::get_skin),
+    );
     cfg.service(
         web::scope("account")
             .service(account::me)
